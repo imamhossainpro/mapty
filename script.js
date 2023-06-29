@@ -4,7 +4,7 @@ let map, mapEvent;
 
 class Workout {
   date = new Date();
-  id = (new Date() + "").slice(-10);
+  id = (Date.now() + "").slice(-10);
   clicks = 0;
   constructor(coords, distance, duration) {
     this.coords = coords; //[Lat, long]
@@ -17,9 +17,9 @@ class Workout {
 
     this.description = `${this.type[0].toUpperCase()}${this.type.slice(1)} on ${
       months[this.date.getMonth()]
-    } ${this.date.getDate()}`;  
+    } ${this.date.getDate()}`;
   }
-  click(){
+  click() {
     this.clicks++;
   }
 }
@@ -30,15 +30,14 @@ class Running extends Workout {
     super(coords, distance, duration);
     this.cadence = cadence;
     // this.type = 'running';
-    this.calcPace();
+    this._calcPace();
     this._setDescription();
   }
 
-  calcPace() {
+  _calcPace() {
     //min - km
     this.pace = this.duration / this.distance;
     return this.pace;
-    console.log(this.pace);
   }
 }
 
@@ -48,19 +47,15 @@ class Cycling extends Workout {
     super(coords, distance, duration);
     this.elevationGain = elevationGain;
     // this.type = 'cycling';
-    this.calcSpeed();
+    this._calcSpeed();
     this._setDescription();
   }
-  calcSpeed() {
+  _calcSpeed() {
     //km - hours
     this.speed = this.distance / this.duration;
     return this.speed;
   }
 }
-
-const run1 = new Running([39, -12], 5.2, 24, 78);
-const cycling1 = new Cycling([39, -12], 27, 95, 78);
-// console.log(run1, cycling1);
 
 //*************************** */
 //Application Architecture
@@ -80,6 +75,9 @@ class App {
   constructor() {
     //Get user position
     this._getPosition();
+
+    //Get LOcal Storage 
+    this._getLocalStorage()
     // Attach Event Handlers
     form.addEventListener("submit", this._newWorkout.bind(this));
     inputType.addEventListener("change", this._toggleElevationField);
@@ -148,7 +146,6 @@ class App {
     const duration = +inputDuration.value;
     const { lat, lng } = this.#mapEvent.latlng;
     let workout;
-    // console.log(type);
 
     //If Workout running, create running object
     if (type === "running") {
@@ -162,8 +159,6 @@ class App {
         return alert("Inputs have to be positive Numbers!");
 
       workout = new Running([lat, lng], distance, duration, cadence);
-
-      // console.log(workout);
     }
     //If workout Cycling, create cycling object
     if (type === "cycling") {
@@ -185,6 +180,10 @@ class App {
 
     //Hide Form & Clear Input
     this._hideForm(workout);
+
+    //Set local storage to all workouts
+    this._setLocalStorage();
+
   }
   _renderWorkoutMarker(workout) {
     L.marker(workout.coords)
@@ -270,7 +269,24 @@ class App {
       },
     });
     //using the public interface
-    workout.click()
+    // workout.click()
+  }
+
+  _setLocalStorage() {
+    localStorage.setItem("workouts", JSON.stringify(this.#workouts));
+  }
+  _getLocalStorage() {
+    const data = JSON.parse(localStorage.getItem("workouts"));
+
+    if (!data) return;
+
+    this.#workouts = data;
+
+    this.#workouts.forEach((work) => this._renderWorkout(work));
+  }
+  _reset(){
+    localStorage.removeItem('workouts');
+    location.reload();
   }
 }
 
